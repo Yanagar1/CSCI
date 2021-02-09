@@ -1,0 +1,143 @@
+                       _________________________
+
+                        LAB 14 REVIEW QUESTIONS
+                       _________________________
+
+
+- Name: (Yana Garipova)
+- NetID: (garip001)
+
+Answer the questions below according to the lab specification. Write
+your answers directly in this text file and submit it to complete Lab14.
+
+
+Problem 1: Client Socket Setup
+==============================
+
+  Identify the main steps for a C program to set up a "client" socket
+  which will communicate with remote machine which has a known open port
+  and exchange information.
+
+  1. get address
+  2. make socket
+  3. connect socket and address
+  4. read/write
+
+                      ---  1  ---
+
+      ret = getaddrinfo(hostname, PORT, NULL, &serv_addr);
+
+      /*Given hostname and PORT, getaddrinfo()  returns addrinfo structures,
+      which contains an Internet address. It can be specified in a call to bind(2)
+      or  connect(2). These are some of the built in addrinfo
+                struct fields:
+                  int              ai_flags;
+                  int              ai_family;
+                  int              ai_socktype;
+                  int              ai_protocol;
+                  And we use them to create a socket.*/
+
+
+                      ---  2  ---
+
+      int sockfd = socket(serv_addr->ai_family,
+                         serv_addr->ai_socktype,
+                         serv_addr->ai_protocol);
+
+      /*This function creates a two way communication block with domain serv_addr->ai_family,
+      type serv_addr->ai_socktype,and protocol serv_addr->ai_protocol.
+      socket() returns a descriptor. */
+
+                      ---  3  ---
+
+      ret = connect(sockfd, serv_addr->ai_addr, serv_addr->ai_addrlen);
+
+                //establishes connection.
+
+                      ---  4  ---
+          //Then just read() and write() 
+
+
+
+Problem 2: Server Socket Setup
+==============================
+
+  Identify the main steps for a C program to set up a "server" socket
+  which will listen for connections from remote machine.
+
+  int listen_fd = socket(serv_addr->ai_family,       //1 socket to listen to connections
+                          serv_addr->ai_socktype,
+                          serv_addr->ai_protocol);
+
+  ret = bind(listen_fd, serv_addr->ai_addr, serv_addr->ai_addrlen); //binds socket to the address
+                                                                    // and allows listening to further connections
+  MAIN LOOP
+    while(1){
+        int client_fd = accept(listen_fd, client_addr, &client_addr_size); //accepts the connection
+                                              //creates individual socket, assigns to client's address
+                                              // blocks until connections come
+    //read()/write() here
+    }
+
+
+
+Problem 3: Private Messages
+===========================
+
+  Consider the addition of private messages to the blather
+  server/client.  This feature would allow a user to type a message like
+  ,----
+  | Bruce>> @Lois I know Clark's alter ego
+  `----
+  and have it only delivered to the user specified with the @ symbol,
+  Lois in this case, rather than have the message broadcast to all
+  users. Only on the screen of Lois and Bruce would appear the private
+  message delivery:
+  ,----
+  | [Private: Bruce @ Lois] : I know Clark's alter ego
+  `----
+  All other users would not see this message.
+
+  Discuss the alterations to server and client that would be required to
+  implement this feature. Include in your description.
+  1. Any additional data types or alterations to existing data types
+  2. Any additional FIFOs or protocol alterations
+  3. Changes required for bl-client to implement private messages
+  4. Changes required for bl-server to implement private messages
+
+  In the bl-client, we'll need to analyze the simpio->buf if it starts with @.
+  Then strcpy() the name until the space character (or maybe max name length?),
+  into predefined char array.
+  mesg_t struct should also get fields
+  .recipient
+  .PRIVATE
+  if bl-client gets first '@' and sets PRIVATE = 1, then fills msg.recipient with name of recipient;
+  Server receives,goes through the clients array with strcmp() to find the name.
+  Then gets the person's fifo and broadcasts there. In server_broadcast():
+                                if (msg.PRIVATE==0){
+                                    //for loop, send to all
+                                } else{
+                                    //send to the found fifo
+                                }
+                                //plus error if the recipient's name is not there
+                                //and NO LOGGING, so others can't see.
+
+Problem 4: mmap()
+=================
+
+  Describe briefly what mmap() does and how it may be used to simplify
+  file I/O operations significantly.
+
+	mmap() maps files or devices into memory. It returns a virtual address. 
+	
+	void *mmap(void *addr, size_t length, int prot, int flags,
+                  int fd, off_t offset);
+		
+	addr is the starting point of the new address. 
+	The contents of a file mapping, are initialized using length bytes starting at
+        offset in the file referred  to  by  the  file descriptor fd. 
+
+	It can simplify I/O operations because we'll use the returned address and will
+	not have to open/close fd's and use read/write. 
+	 
+	

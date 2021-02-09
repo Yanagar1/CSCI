@@ -1,0 +1,136 @@
+                           __________________
+
+                            LAB 13 QUESTIONS
+                           __________________
+
+
+- Name: (Yana Garipova)
+- NetID: (garip001)
+
+Answer the questions below according to the lab specification. Write
+your answers directly in this text file and submit it to complete Lab13.
+
+
+Problem 1 `http-get.c'
+======================
+
+  Examine the source code for `http-get.c' and use it to contact a few
+  hosts and files such as those shown at the top of the source.  Answer
+  the following questions.
+
+
+A
+~
+
+  - What is the full name of the that protocol is being employed?
+  - Which port does the server listen on in this protocol?
+
+            We use http protocol and connecting through the port 80.
+            Port 80 is assigned to the http. Computer communicates messages
+            and requests through the port.
+B
+~
+
+  Describe which system calls are used to find an internet address,
+  create a socket, and connect the socket to the found address.
+
+            Find internet address:
+
+                ret = getaddrinfo(hostname, PORT, NULL, &serv_addr);
+
+                Given hostname and PORT, getaddrinfo()  returns addrinfo
+                structures, which contains an Internet address.
+                It that can be specified in a call to bind(2)
+                or  connect(2). These are some of the built in addrinfo
+                struct fields:
+                  int              ai_flags;
+                  int              ai_family;
+                  int              ai_socktype;
+                  int              ai_protocol;
+                  And we use them to create a socket.
+
+
+            Create a socket:
+
+                int sockfd = socket(serv_addr->ai_family,
+                                serv_addr->ai_socktype,
+                                serv_addr->ai_protocol);
+
+                This function creates a two way communication block with
+                domain serv_addr->ai_family, type serv_addr->ai_socktype,
+                and protocol serv_addr->ai_protocol. socket() returns a descriptor.
+
+            Connect the socket to the address:
+
+                ret = connect(sockfd, serv_addr->ai_addr,
+                              serv_addr->ai_addrlen);
+
+                //establishes connection.
+
+
+C
+~
+
+  In this protocol, which entity, SERVER or CLIENT, sends data first?
+  (Though you don't have access to a server code, this should be obvious
+  from the structure of the client code).
+
+            Requests and connections are obviously initiated by the client.
+            Otherwise how would server know who to connect to. :/
+D
+~
+
+  Does the protocol work in plain text (human readable) or in binary
+  format (harder for humans to read directly).  Show examples/evidence
+  to support your answer.
+
+        In get_address_string() we use:
+        inet_ntop(addr->ai_family, ip_address, buffer, INET6_ADDRSTRLEN);
+
+        //which converts binary IPv4 or IPv6 addresses to the text form.
+        inet_ntop() converts the network address structure addr->ai_family
+        into a character string,  then copies it to the buffer.
+        INET6_ADDRSTRLEN is the number of bytes available in this buffer.
+
+        So first we make an address and set up connection in binary form,
+        then convert to human readable string.
+
+E
+~
+
+  Many protocols use /headers/ which are meant to convey information
+  between the communication programs about the state of the
+  communication but are NOT data that a program user would be interested
+  in.  Show a few headers which appear in communication and describe
+  what you infer their meaning to be.
+
+        Protocols use headers as place for info about the protocol.
+
+	HTTP/1.1 200 OK
+	Date: Fri, 08 Dec 2017 20:35:45 GMT
+	Server: Apache
+	Last-Modified: Wed, 29 Nov 2017 20:12:07 GMT
+	ETag: "47-55f24bfed13c0"
+	Accept-Ranges: bytes
+	Content-Length: 71
+	Vary: Accept-Encoding
+	Connection: close
+	Content-Type: text/plain
+		 
+
+F
+~
+
+  Attempting to hunt down the actual homepage for the UMN via
+  ,----
+  | ./http-get twin-cities.umn.edu /
+  `----
+  will produce an interesting conundrum: the address to be contacted to
+  retrieve the file uses a DIFFERENT PROTOCOL.
+
+  Identify this other protocol, the port its servers use, and why it
+  would be much more complex to write a client to use it.
+
+          It actually uses https protocol, where 's' stands for 'secure'.
+          This protocol encrypts and decrypts outcoming and incoming data,
+          what would make programming of the client side more complicated.

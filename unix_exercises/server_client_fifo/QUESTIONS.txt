@@ -1,0 +1,133 @@
+                           __________________
+
+                            LAB 08 QUESTIONS
+                           __________________
+
+
+- Name: (Yana Garipova)
+- NetID: (garip001)
+
+Answer the questions below according to the lab specification. Write
+your answers directly in this text file and submit it to complete Lab08.
+
+
+PROBLEM 1 `server_em.c'
+=======================
+
+A
+~
+
+  Examine the source code for `em_server.c'. Note of the 3 FIFOs that
+  are used: Requests, Completions, and Data.  Describe what appears to
+  be the purpose of each from the server perspective.
+
+          Server will write a client's input into the request fifo and
+          process them one by one. It will search for the name in the data[]
+          write the corresponding e-mail to the data fifo.
+          Name requests that were completed will go
+          to the completions fifo and e-mails we're looking for will be
+          stored in the data fifo.
+
+B
+~
+
+  What mechanism is used to notify clients that their request has been
+  filled and that data is ready on the Data FIFO?
+
+          We have a struct that will work for lookup_t types, that is request.
+          We also open the file descriptor for requests_fd and read the name from
+          there. Then it just prints the statement "received request.."
+
+          Then the program analyzes the data table and writes a found email to the
+          email field of the request structure. And prints the results of course.
+
+C
+~
+
+  How many clients have information on each of the FIFOs:
+  - On the Request FIFO?
+  - On the Completion FIFO?
+  - On the Data FIFO?
+
+          Many clients can request but only one data gets processed
+          at a time.
+
+PROBLEM 2 `client_em.c'
+=======================
+
+  Note that `read_AB.c' uses the same techniques as `sleep_print.c' to
+  set up signal handlers and shut down on receiving a signal.
+A
+~
+
+  Examine the `while()' loop in the client. When waiting for the server
+  to respond, does the client make use of busy waiting (polling),
+  interrupt-driven waiting, or something in between?
+
+          We use non-busy waiting here. The process sleeps for 1 sec and
+          wakes up to check if the data is received. It is sort of in between
+          of the busy waiting and interrupt-driven waiting.
+
+B
+~
+
+  Experiment with changing the while() loop associated with server
+  responses.  Time running 100 transactions using the provided
+  `run_simulations.sh' script as in
+  ,----
+  | $> time run_simulation.sh 100 > xxx
+  `----
+  Note the timing. You may need to discuss with your TA how to interpret
+  the results of the shell `time' command which measures CPU utilization
+  for programs.
+
+  Comment out the `while()' loop associated with waiting and un-comment
+  the other `while()' loop.  Re-run the above script invocation and
+  report the differences in timing.
+
+          Non-busy waiting with the original while loop is much faster,
+          --> non-busy waiting is more efficient than busy waiting.
+
+
+PROBLEM 3 Protocol
+==================
+
+A
+~
+
+  Describe the overall protocol used by the client and server to
+  communicate. Use the labels in the messages like `C SERVER' and `B
+  CLIENT' to help you organize the order what happens when and things
+  can happen in an unpredictable order.
+
+          A CLIENT sends request
+          B CLIENT waits/continues
+          B SERVER receives request
+          B SERVER fills request
+          B SERVER signals pid
+          C CLIENT gets response
+          D CLIENT indicates completion
+          E SERVER completes
+
+B
+~
+
+  In an initial version of the programs, the client used the following
+  line to wait for a server response.
+  ,----
+  | raise(SIGSTOP);
+  `----
+  The `raise()' command sends a signal to the running process so that
+  the effect of this line is to stop the current process until a signal
+  to continue is received.  This approach was found to fail in many
+  cases causing the entire system to stall.
+
+  Based on your understanding of the protocol above, WHY could simply
+  stopping the client process result a breakdown?
+
+  You may wish to uncomment and try this version in the code.
+
+            If we use SIGSTOP and no SIGCONT is recieved, client will be out of
+            the game and will not get the response back. Therefore, the server
+            will not update the completion of current name and will not proceed
+            to the next one.

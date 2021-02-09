@@ -1,0 +1,204 @@
+                           __________________
+
+                            LAB 04 QUESTIONS
+                           __________________
+
+
+- Name: (Yana Garipova)
+- NetID: (garip001)
+
+Answer the questions below according to the lab specification. Write
+your answers directly in this text file and submit it to complete Lab04.
+
+
+PROBLEM 1 `parent_listen.c' 
+===========================
+
+A
+~
+
+  Compile and run the program in `parent_listen.c'. Show it's output
+  below.
+
+	Child wrote 17 bytes
+	Parent read 17 bytes
+	Child said: 'Send $$$ please!'
+
+B
+~
+
+  Consider the call to pipe(). Do some research to figure out what a
+  pipe does and explain in a few sentences.
+
+	Pipe() takes number of ints, in our case it is two: 1 and 0.
+	0 is the read end and 1 is the write end.
+	The child takes msg string +1 and writes it using pipe file descriptor.  
+        Then the parent reads it.
+C
+~
+
+  Observe the calls to read() and write(). Their meaning should be
+  self-evident (read and write data) but the parameters to these
+  functions are interesting. Do some reading and explain the 3
+  parameters to each of them. Also explain their return value.
+
+	read(par_child_pipe[PREAD], buffer, BUFSIZE); read function and its parameters are made this way:
+	read(where to read from, where to save the read info, how many bites to read); read() returns the
+	int number of bytes actually read.
+
+	write(par_child_pipe[PWRITE], msg, msg_len); write function and its parameters are made this way:
+	write(where to, where from, how many bites); the write function writes str as told and returns the
+	int number of bytes written. 
+D
+~
+
+  If you run the program a number of times, you may see output in
+  different orders: the child may report writing data before the parent
+  has read it.  Adjust the position of the wait() call to guarantee that
+  the order is always
+  - Child wrote
+  - Parent read
+  - Child said
+  Paste your code below.
+
+	Looking at the code seems like there is no need to move the wait because it waits in the original program
+	anyway. I ran the code several times and output was the same. However, if I should move wait(), it would 	 also make sense to move it after the fork() before the child code. Like this:
+
+	
+  pid_t child_pid = fork();
+  if(child_pid <0){
+    perror("Failed to fork");
+    exit(1);
+  }
+  wait(NULL);
+
+  // CHILD CODE
+  if(child_pid == 0){
+    char *msg = "Send $$$ please!";
+    int msg_len = strlen(msg)+1;
+    int bytes_written = write(par_child_pipe[PWRITE], msg, msg_len);
+    printf("Child wrote %d bytes\n",bytes_written);
+    fflush(stdout);
+
+    close(par_child_pipe[PWRITE]);
+    close(par_child_pipe[PREAD]);
+    exit(0);
+  }
+
+PROBLEM 2 `capture_stdout.c'
+============================
+
+A
+~
+
+  Compile and run the program in `capture_stdout.c'. Show its output.
+
+	Process 5818 Piping
+	5818 Read from the my_pipe
+	5818 Read: '5818 In the pipe, five by five'
+
+B
+~
+
+  The calls `dup()' and `dup2()' are used in this program to manipulate
+  file descriptors. Explain the effects of the lines below.
+  ,----
+  | int stdout_bak = dup(STDOUT_FILENO);
+  | dup2(my_pipe[PWRITE], STDOUT_FILENO);
+  | ...
+  | dup2(stdout_bak, STDOUT_FILENO);
+  `----
+	The first line creates a copy of file descriptor STDOUT_FILENO using
+	the lowest-numbered unused descriptor and assigns it to stdout_bak. So stdout_bak is an 
+	int - the new descriptor.
+
+	The second line takes file descriptor number my_pipe[1], copies it and 
+	gives the new one number of STDOUT_FILENO.
+
+	The third line takes the number of stdpout_bak which was defined in the first line as some lowest unused #.
+	Then, it copies the file descriptor and assigns the value of STDOUT_FILENO to the copy.
+
+	As result, we have stdout_bak as the new file descriptor under some lowest unused #; we have file descriptor
+	under number STDOUT_FILENO; and we have copy of stdout_bak under the STDOUT_FILENO # again.
+C
+~
+
+  The use of `printf()' normally puts output directly on the
+  screen. Explain why the statement
+  ,----
+  | printf("%d In the pipe, five by five",
+  |        getpid());
+  `----
+  does not print to screen as usual.
+	
+	The line 
+	dup2(my_pipe[PWRITE], STDOUT_FILENO); prints the output to the pipe instead of the screen.
+	Then, this line: 
+	int bytes_read = read(my_pipe[PREAD], buf, 2048); reads from pipe and saves read info in buf. 
+	This line:
+	printf("%d Read: '%s'\n",getpid(),buf); prints what is stored in buf plus the string "Read:".
+
+D  
+~   
+
+  Modify the code so that the `In the pipe...' expression is printed by
+  a child process.
+  - Add a `fork()' AFTER `dup2()' redirects standard output but before
+    the print
+  - Add an `if()' to distinguish between parent and child
+  - The child should print then exit
+  - The parent should restore stdout then read from the pipe
+  - Add a `wait()' to guarantee the parent waits for the child to
+    complete prior to reading from the pipe
+  Paste your completed code below
+
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/wait.h>
+
+#define PREAD 0                            // index of read end of pipe
+#define PWRITE 1                           // index of write end of pipe
+
+int main(){
+  pid_t cpid;
+  setvbuf(stdout, NULL, _IONBF, 0);        // Turn off I/O buffering
+
+  printf("Process %d Piping\n",getpid());
+  int my_pipe[2];
+  pipe(my_pipe);
+
+  int stdout_bak = dup(STDOUT_FILENO);     // Duplicate stdout so it can be restored later
+  dup2(my_pipe[PWRITE], STDOUT_FILENO);    // Redirect stdout to pipe
+
+
+  pid_t child = fork();
+  if (child==-1){
+  	perror("Failed to fork");
+	exit(1);
+  }
+  wait(NULL);
+
+  if (child ==0){
+  	printf("%d In the pipe, five by five", getpid());           
+  	close(my_pipe[PWRITE]);                  // Close the write end of the pipe 
+	close(my_pipe[PREAD]);
+	exit(0);
+  }
+  close(my_pipe[PWRITE]);
+  dup2(stdout_bak, STDOUT_FILENO);         // Restore stdout: redirect to backed up fd
+
+  printf("%d Read from the my_pipe\n",getpid());
+  char buf[2048];
+  int bytes_read = read(my_pipe[PREAD], buf, 2048);
+
+  buf[bytes_read] = '\0';                  // Not null-terminated by default, append '\0'
+  close(my_pipe[PREAD]);                   // Close read end
+  printf("%d Read: '%s'\n",getpid(),buf);  // Show earlier output
+  
+  return 0;
+}
+
+
+
+

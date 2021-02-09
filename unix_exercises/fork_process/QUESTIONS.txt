@@ -1,0 +1,198 @@
+                           __________________
+
+                            LAB 02 QUESTIONS
+                           __________________
+
+
+- Name: (Yana Garipova)
+- NetID: (garip001 IN garip001@umn.edu)
+
+Answer the questions below according to the lab specification. Write
+your answers directly in this text file and submit it to complete Lab01. // lab02 ?? 
+
+
+PROBLEM 1 `fork1.c'
+===================
+
+A
+~
+
+I am number 0, my pid is 13665
+I am number 8, my pid is 13664
+I am number 1, my pid is 13666
+I am number 2, my pid is 13667
+I am number 3, my pid is 13668
+I am number 4, my pid is 13669
+I am number 5, my pid is 13670
+I am number 6, my pid is 13671
+I am number 7, my pid is 13672
+
+
+
+B
+~
+
+  Is the output ordered or disordered with respect to the "I am
+  number..." statements? Why?
+
+Disordered, because the print statement is outside of the loop and i is incremented before the print statement.The original process goes through the loop creating new ones while the child prints out its statement. 
+Number 0 was the first child created and it went to the print statement. At the same time the main
+process went through the loop, created new children, exited the loop at i=7, incremented i and went to the print statement. Then, all the children printed themselves. 
+I changed some spaces in the code and got 0, 8, 6 printed out first. OS chose to output it this way. 
+
+
+C
+~
+
+  Add calls to the wait() or waitpid() function to ensure that the
+  output is ordered. Paste your code below.
+
+int main(void) {
+  int i;
+  pid_t cpid;
+
+  for(i = 0; i<8; i++){
+    pid_t child = fork();
+    cpid = wait(NULL);
+    if(child == 0){
+      break;
+    }
+  }
+  printf("I am number %d, my pid is %d\n",i,getpid());
+  return 0;
+}
+
+
+D
+~
+
+  How many parents and children are there in this program? What is their
+  arrangement?
+
+1 parent with 8 children. The parent waits for each child to terminate before creating new children. The parent prints out the last, since it waits for every child. But since it was started first, its pid is the lowest number. 
+
+
+PROBLEM 2 `fork-exec1.c'
+========================
+
+A
+~
+
+Running command 'ls'
+------------------
+total 31K
+drwx------ 2 garip001 CSEL-student    6 Sep 18 18:12 .
+drwx------ 5 garip001 CSEL-student    7 Sep 18 11:19 ..
+-rwx------ 1 garip001 CSEL-student 8.6K Sep 18 18:12 a.out
+-rw------- 1 garip001 CSEL-student  288 Sep 18 18:10 fork1.c
+-rw------- 1 garip001 CSEL-student  360 Sep 13 13:56 fork-exec1.c
+-rw------- 1 garip001 CSEL-student 3.4K Sep 18 18:10 QUESTIONS.txt
+
+
+B
+~
+
+  Adjust the contents of the `child_argv[]' array. Try remove the "-l"
+  element, try adding on ".." prior to the final NULL, or make other
+  modifications INCLUDING for the 0th "ls" string.  Recompile and
+  describe whether the output has changed.
+
+int main(void){
+
+  char *child_argv[] = {"gcc","-ah", "..", NULL};
+  char *child_cmd = "ls";
+
+  printf("Running command '%s'\n",child_cmd);
+  printf("------------------\n");
+  execvp(child_cmd,child_argv);
+  printf("------------------\n");
+  printf("Finished\n");
+  return 0;
+}
+
+Running the code above gives the following output: 
+
+Running command 'ls'
+------------------
+.  ..  ._archlab-handout  lab01-code  lab02-code  lab02-code.zip  last semester
+
+Even if I changed the first argument to "gcc" ls function still runs because it is the child's job and 
+I have not changed anything in *child_cmd line. Entering ".." as an argument went back to the desktop folder and showed everything I have on the desktop.
+Since I removed the "-l" argument, the files and folders aren't listed on a new line with details but just names in a row.  
+
+C
+~
+
+  Change the child_cmd string from "ls" to be something else like "gcc"
+  or "cat". Recompile ad explain what happens now.
+
+int main(void){
+
+  char *child_argv[] = {"./fork1","-l","-ah",NULL};
+  char *child_cmd = "./fork1";
+
+  printf("Running command '%s'\n",child_cmd);
+  printf("------------------\n");
+  execvp(child_cmd,child_argv);
+  printf("------------------\n");
+  printf("Finished\n");
+  return 0;
+}
+
+Here, I made the process run the fork1.c which I compiled for it. When the process enters execvp, its environment is changed and it can do whatever we tell it to, in this case, it is "./fork1". 
+
+The parent does not wait for the child - the child stops execution of the parent, so we don't get to the last 2 print statements.
+
+Here is the output:
+
+Running command './fork1'
+------------------
+I am number 0, my pid is 28596
+I am number 1, my pid is 28597
+I am number 2, my pid is 28598
+I am number 3, my pid is 28599
+I am number 4, my pid is 28600
+I am number 5, my pid is 28601
+I am number 6, my pid is 28602
+I am number 7, my pid is 28603
+I am number 8, my pid is 28595
+
+
+D
+~
+
+  Currently `fork-exec1.c' does not reach the bottom statements.
+  ,----
+  |   printf("------------------\n");
+  |   printf("Finished\n");
+  `----
+  Correct this by doing the following:
+  - Fork a child process
+  - Have ONLY the child process call execvp()
+  - Have the parent process wait() for the child
+  Paste your code below.
+
+int main(void){
+
+  char *child_argv[] = {"ls","-l","-ah",NULL};
+  char *child_cmd = "ls";
+  pid_t pid;
+  pid_t child;
+
+  printf("Running command '%s'\n",child_cmd);
+  printf("------------------\n");
+  child = fork();
+  pid = wait(NULL);
+  if(child == 0){
+  	execvp(child_cmd,child_argv);
+  }
+  printf("------------------\n");
+  printf("Finished\n");
+  return 0;
+}
+
+A child is created using fork(), then executes the execvp function, while parent waits for it. Then, the
+child terminates and the parent resumes and prints out the last 2 lines. 
+
+
+
